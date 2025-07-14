@@ -1,6 +1,19 @@
 // qrCodeDisplayModule.js
 
 /**
+ * Import html2canvas library
+ * 
+ * Option 1: CDN (add to your HTML head)
+ * <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+ * 
+ * Option 2: NPM
+ * npm install html2canvas
+ * import html2canvas from 'html2canvas';
+ * 
+ * Option 3: Dynamic import (used in this module)
+ */
+
+/**
  * Creates and initializes a self-contained QR code display module.
  * The module injects its own HTML and CSS into the document.
  *
@@ -22,26 +35,29 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
                 </div>
             </div>
 
-            <div class="qr-section">
-                <div class="qr-code-container">
-                    <img src="${qrImageUrl}" alt="QR Code" class="qr-image">
+            <!-- Container for generating full QR image -->
+            <div class="qr-full-content" id="qr-full-content">
+                <div class="qr-section">
+                    <div class="qr-code-container">
+                        <img src="${qrImageUrl}" alt="QR Code" class="qr-image">
+                    </div>
+                    <div class="user-info">
+                        <span class="user-name">${userName}</span>
+                    </div>
+                    <div class="qr-description">
+                        QR đồng bộ dữ liệu và kết nối nhân sự trên Vào Ca <br> Ứng dụng quản trị nhân sự toàn diện trên điện
+                        thoại.
+                    </div>
                 </div>
-                <div class="user-info">
-                    <span class="user-name">${userName}</span>
-                </div>
-                <div class="qr-description">
-                    QR đồng bộ dữ liệu và kết nối nhân sự trên Vào Ca <br> Ứng dụng quản trị nhân sự toàn diện trên điện
-                    thoại.
-                </div>
-            </div>
 
-            <div class="activation-section">
-                <div class="activation-header">
-                    <div class="activation-title">Kích hoạt hồ sơ nhân viên</div>
-                </div>
-                <div class="activation-details">
-                    Tải ứng dụng <span class="highlight">Vào Ca</span> về điện thoại, sau đó đăng nhập vào ứng dụng, mở chức
-                    năng quét QR và thực hiện đồng bộ nhân sự trên ứng dụng.
+                <div class="activation-section">
+                    <div class="activation-header">
+                        <div class="activation-title">Kích hoạt hồ sơ nhân viên</div>
+                    </div>
+                    <div class="activation-details">
+                        Tải ứng dụng <span class="highlight">Vào Ca</span> về điện thoại, sau đó đăng nhập vào ứng dụng, mở chức
+                        năng quét QR và thực hiện đồng bộ nhân sự trên ứng dụng.
+                    </div>
                 </div>
             </div>
 
@@ -132,14 +148,21 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
             justify-content: center;
             align-items: center;
             border-radius: 50%;
-            cursor: pointer; /* Add cursor pointer for better UX */
+            cursor: pointer;
+        }
+
+        .qr-full-content {
+            width: 100%;
+            background: linear-gradient(290deg, #EAF6FF 9.78%, #F3FFE9 109.56%);
+            padding: 20px;
+            box-sizing: border-box;
         }
 
         .containerQRByVu .qr-section {
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 0px;
+            padding: 20px 0;
             background-color: transparent;
         }
 
@@ -181,7 +204,7 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
         .containerQRByVu .activation-section {
             background-color: #f9f9f9;
             padding: 15px;
-            margin: 10px 25px;
+            margin: 20px 0;
             border-radius: 10px;
             border: 1px solid #fff;
         }
@@ -233,8 +256,6 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
             color: #007bff;
         }
 
-        /* Note: .bottom-nav and .bottom-text were in your CSS but not in your HTML structure.
-           I'm keeping them here for completeness if you decide to add them. */
         .containerQRByVu .bottom-nav {
             display: flex;
             justify-content: space-around;
@@ -269,13 +290,78 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
         document.head.appendChild(style);
     }
 
-    async function shareQrImage(qrImageUrl) {
+    // Function to dynamically load html2canvas if not available
+    async function loadHtml2Canvas() {
+        if (window.html2canvas) {
+            return window.html2canvas;
+        }
+
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+            script.onload = () => resolve(window.html2canvas);
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    }
+
+    // Function to convert element to canvas and then to base64
+    async function elementToBase64(element, options = {}) {
+        try {
+            const html2canvas = await loadHtml2Canvas();
+            
+            if (!html2canvas) {
+                console.error('html2canvas library could not be loaded');
+                return null;
+            }
+
+            const canvas = await html2canvas(element, {
+                backgroundColor: '#EAF6FF',
+                scale: 2,
+                useCORS: true,
+                allowTaint: true,
+                scrollX: 0,
+                scrollY: 0,
+                width: element.offsetWidth,
+                height: element.offsetHeight,
+                ...options
+            });
+
+            return canvas.toDataURL('image/png');
+        } catch (error) {
+            console.error('Error converting element to base64:', error);
+            return null;
+        }
+    }
+
+    // Function to generate full QR image with both sections
+    async function generateFullQrImage() {
+        const fullContentElement = document.getElementById('qr-full-content');
+        if (!fullContentElement) {
+            console.error('QR full content element not found');
+            return null;
+        }
+
+        const base64Image = await elementToBase64(fullContentElement);
+        return base64Image;
+    }
+
+    async function shareQrImage() {
         if (typeof apimobileAjax !== 'function') {
             alert('Chức năng chia sẻ hiện chỉ hỗ trợ trong ứng dụng di động!');
             return;
         }
-        let filePath = qrImageUrl.replace(/^data:image\/png;base64,/, '');
+
+        // Generate the full QR image with both sections
+        const fullQrImageBase64 = await generateFullQrImage();
+        if (!fullQrImageBase64) {
+            alert('Không thể tạo hình ảnh QR. Vui lòng thử lại.');
+            return;
+        }
+
+        let filePath = fullQrImageBase64.replace(/^data:image\/png;base64,/, '');
         let filePathR = '';
+        
         await apimobileAjaxAsync(
             {
                 success: function (data) {
@@ -317,16 +403,21 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
         if (downloadButton) {
             downloadButton.addEventListener('click', async () => {
                 try {
-                    let imageDataUrl = qrImageUrl.replace(/,"QRCode\.png"/, '');
+                    // Generate the full QR image with both sections
+                    const fullQrImageBase64 = await generateFullQrImage();
+                    if (!fullQrImageBase64) {
+                        alert('Không thể tạo hình ảnh QR. Vui lòng thử lại.');
+                        return;
+                    }
 
                     const link = document.createElement('a');
-                    link.href = imageDataUrl;
-                    link.download = 'QRCode.png';
+                    link.href = fullQrImageBase64;
+                    link.download = 'QRCode_Full.png';
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
 
-                    console.log('✅ Đã tải xuống mã QR.');
+                    console.log('✅ Đã tải xuống mã QR đầy đủ.');
                 } catch (error) {
                     console.error('❌ Lỗi khi tải QR:', error);
                     alert('Không thể tải ảnh QR. Vui lòng thử lại.');
@@ -337,7 +428,7 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
         const shareButton = container.querySelector('.action-item:nth-child(2)');
         if (shareButton) {
             shareButton.addEventListener('click', () => {
-                shareQrImage(qrImageUrl);
+                shareQrImage();
             });
         }
 
@@ -373,4 +464,9 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
     } else {
         console.error('QR display container not found after injection.');
     }
+
+    // Return the function to generate full QR image for external use
+    return {
+        generateFullQrImage: generateFullQrImage
+    };
 }
