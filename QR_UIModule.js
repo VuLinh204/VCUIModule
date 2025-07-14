@@ -203,7 +203,7 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
         .containerQRByVu .activation-section {
             background-color: #f9f9f9;
             padding: 15px;
-            margin: 20px 0;
+            margin: 10px 0;
             border-radius: 10px;
             border: 1px solid #fff;
         }
@@ -373,101 +373,99 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
             return;
         }
 
-        // Generate the full QR image with both sections
-        const fullQrImageBase64 = await generateFullQrImage();
-        if (!fullQrImageBase64) {
-            alert('Không thể tạo hình ảnh QR. Vui lòng thử lại.');
-            return;
+        if (typeof mainLoadPanel !== 'undefined' && mainLoadPanel.ShowLoadPanel) {
+            mainLoadPanel.ShowLoadPanel('Đang chia sẻ...');
         }
 
-        let filePath = fullQrImageBase64.replace(/^data:image\/png;base64,/, '');
-        let filePathR = '';
-        
-        await apimobileAjaxAsync(
-            {
-                success: function (data) {
-                    console.log('🚀 ~ success:function ~ data:', data);
-                    filePathR = data;
-                },
-            },
-            {
-                MethodName: 'MergeFileSplit',
-                prs: [filePath, 0, 1, 'ScanQrDevice.jpg', 'ScanQrDevice.jpg', ''],
+        try {
+            const fullQrImageBase64 = await generateFullQrImage();
+            if (!fullQrImageBase64) {
+                alert('Không thể tạo hình ảnh QR. Vui lòng thử lại.');
+                return;
             }
-        );
 
-        const fileName = 'ScanQrDevice.jpg';
-        const tmpData = {
-            MethodName: 'MobileShareFileAsync',
-            prs: [filePathR, fileName],
-        };
+            let filePath = fullQrImageBase64.replace(/^data:image\/png;base64,/, '');
+            let filePathR = '';
 
-        const option = {
-            success: (res) => console.log('✅ Chia sẻ thành công:', res),
-            error: (err) => console.error('❌ Chia sẻ thất bại:', err),
-        };
+            await apimobileAjaxAsync(
+                {
+                    success: function (data) {
+                        filePathR = data;
+                    },
+                },
+                {
+                    MethodName: 'MergeFileSplit',
+                    prs: [filePath, 0, 1, 'ScanQrDevice.jpg', 'ScanQrDevice.jpg', ''],
+                }
+            );
 
-        await apimobileAjax(option, tmpData);
+            const fileName = 'ScanQrDevice.jpg';
+            const tmpData = {
+                MethodName: 'MobileShareFileAsync',
+                prs: [filePathR, fileName],
+            };
+
+            const option = {
+                success: (res) => console.log('✅ Chia sẻ thành công:', res),
+                error: (err) => console.error('❌ Chia sẻ thất bại:', err),
+            };
+
+            await apimobileAjax(option, tmpData);
+        } catch (error) {
+            console.error('Lỗi khi chia sẻ QR:', error);
+        } finally {
+            if (typeof mainLoadPanel !== 'undefined' && mainLoadPanel.HideLoadPanel) {
+                mainLoadPanel.HideLoadPanel();
+            }
+        }
     }
 
     async function downloadQrImage(button) {
         const originalText = button.querySelector('span').textContent;
-        
+
         try {
-            // Show loading state
-            button.classList.add('loading');
-            button.querySelector('span').textContent = 'Đang tải...';
-            
-            console.log('🔄 Generating QR image for download...');
-            const fullQrImageBase64 = await generateFullQrImage();
-            
-            if (!fullQrImageBase64) {
-                throw new Error('Failed to generate QR image');
+            // Hiển thị loading toàn màn hình
+            if (typeof mainLoadPanel !== 'undefined' && mainLoadPanel.ShowLoadPanel) {
+                mainLoadPanel.ShowLoadPanel('Đang tải QR code...');
             }
 
-            // Create download link
+            button.classList.add('loading');
+            button.querySelector('span').textContent = 'Đang tải...';
+
+            const fullQrImageBase64 = await generateFullQrImage();
+            if (!fullQrImageBase64) throw new Error('Failed to generate QR image');
+
             const link = document.createElement('a');
             link.href = fullQrImageBase64;
             link.download = `QRCode_${userName}_${new Date().toISOString().split('T')[0]}.png`;
-            link.style.display = 'none';
-            
-            // Append to body, click, and remove
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
 
-            console.log('✅ QR image downloaded successfully');
-            
-            // Show success feedback
             button.querySelector('span').textContent = 'Thành công!';
             setTimeout(() => {
                 button.querySelector('span').textContent = originalText;
             }, 2000);
-            
         } catch (error) {
             console.error('❌ Download error:', error);
-            
-            // Show error feedback
             button.querySelector('span').textContent = 'Lỗi tải xuống';
+
             setTimeout(() => {
                 button.querySelector('span').textContent = originalText;
             }, 2000);
-            
-            // Fallback: try to open image in new tab
-            try {
-                const fallbackImage = await generateFullQrImage();
-                if (fallbackImage) {
-                    const newWindow = window.open();
-                    newWindow.document.write(`<img src="${fallbackImage}" alt="QR Code" style="max-width: 100%; height: auto;">`);
-                    newWindow.document.title = 'QR Code - Right click to save';
-                }
-            } catch (fallbackError) {
-                console.error('❌ Fallback also failed:', fallbackError);
-                alert('Không thể tải xuống QR code. Vui lòng thử lại sau.');
+
+            const fallbackImage = await generateFullQrImage();
+            if (fallbackImage) {
+                const newWindow = window.open();
+                newWindow.document.write(`<img src="${fallbackImage}" alt="QR Code" style="max-width: 100%; height: auto;">`);
+                newWindow.document.title = 'QR Code - Right click to save';
             }
         } finally {
-            // Remove loading state
             button.classList.remove('loading');
+            // Ẩn load panel
+            if (typeof mainLoadPanel !== 'undefined' && mainLoadPanel.HideLoadPanel) {
+                mainLoadPanel.HideLoadPanel();
+            }
         }
     }
 
