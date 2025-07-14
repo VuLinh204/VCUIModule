@@ -154,7 +154,7 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
         .qr-full-content {
             width: 100%;
             background: linear-gradient(290deg, #EAF6FF 9.78%, #F3FFE9 109.56%);
-            padding: 20px;
+            padding: 10px 20px;
             box-sizing: border-box;
         }
 
@@ -162,7 +162,6 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 20px 0;
             background-color: transparent;
         }
 
@@ -238,7 +237,6 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
             justify-content: space-around;
             padding: 10px 0;
             border-top: 1px solid #eee;
-            margin-top: 15px;
         }
 
         .containerQRByVu .action-item {
@@ -280,6 +278,29 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
             text-align: center;
             padding: 10px 20px;
             margin-bottom: 10px;
+        }
+
+        .containerQRByVu .action-item.loading span {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .containerQRByVu .action-item.loading span::before {
+            content: '';
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            margin-right: 6px;
+            border: 2px solid #004c39;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     `;
 
@@ -389,6 +410,67 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
         await apimobileAjax(option, tmpData);
     }
 
+    async function downloadQrImage(button) {
+        const originalText = button.querySelector('span').textContent;
+        
+        try {
+            // Show loading state
+            button.classList.add('loading');
+            button.querySelector('span').textContent = 'Đang tải...';
+            
+            console.log('🔄 Generating QR image for download...');
+            const fullQrImageBase64 = await generateFullQrImage();
+            
+            if (!fullQrImageBase64) {
+                throw new Error('Failed to generate QR image');
+            }
+
+            // Create download link
+            const link = document.createElement('a');
+            link.href = fullQrImageBase64;
+            link.download = `QRCode_${userName}_${new Date().toISOString().split('T')[0]}.png`;
+            link.style.display = 'none';
+            
+            // Append to body, click, and remove
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            console.log('✅ QR image downloaded successfully');
+            
+            // Show success feedback
+            button.querySelector('span').textContent = 'Thành công!';
+            setTimeout(() => {
+                button.querySelector('span').textContent = originalText;
+            }, 2000);
+            
+        } catch (error) {
+            console.error('❌ Download error:', error);
+            
+            // Show error feedback
+            button.querySelector('span').textContent = 'Lỗi tải xuống';
+            setTimeout(() => {
+                button.querySelector('span').textContent = originalText;
+            }, 2000);
+            
+            // Fallback: try to open image in new tab
+            try {
+                const fallbackImage = await generateFullQrImage();
+                if (fallbackImage) {
+                    const newWindow = window.open();
+                    newWindow.document.write(`<img src="${fallbackImage}" alt="QR Code" style="max-width: 100%; height: auto;">`);
+                    newWindow.document.title = 'QR Code - Right click to save';
+                }
+            } catch (fallbackError) {
+                console.error('❌ Fallback also failed:', fallbackError);
+                alert('Không thể tải xuống QR code. Vui lòng thử lại sau.');
+            }
+        } finally {
+            // Remove loading state
+            button.classList.remove('loading');
+        }
+    }
+
     // Function to set up event listeners
     function setupEventListeners(container) {
         const overlay = container.closest('.qr-popup-overlay');
@@ -401,34 +483,30 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
 
         const downloadButton = container.querySelector('.action-item:nth-child(1)');
         if (downloadButton) {
-            downloadButton.addEventListener('click', async () => {
-                try {
-                    // Generate the full QR image with both sections
-                    const fullQrImageBase64 = await generateFullQrImage();
-                    if (!fullQrImageBase64) {
-                        alert('Không thể tạo hình ảnh QR. Vui lòng thử lại.');
-                        return;
-                    }
-
-                    const link = document.createElement('a');
-                    link.href = fullQrImageBase64;
-                    link.download = 'QRCode_Full.png';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-
-                    console.log('✅ Đã tải xuống mã QR đầy đủ.');
-                } catch (error) {
-                    console.error('❌ Lỗi khi tải QR:', error);
-                    alert('Không thể tải ảnh QR. Vui lòng thử lại.');
-                }
+            downloadButton.addEventListener('click',  async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                await downloadQrImage(downloadButton);
             });
         }
 
         const shareButton = container.querySelector('.action-item:nth-child(2)');
         if (shareButton) {
-            shareButton.addEventListener('click', () => {
-                shareQrImage();
+            shareButton.addEventListener('click', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const originalText = shareButton.querySelector('span').textContent;
+                shareButton.classList.add('loading');
+                shareButton.querySelector('span').textContent = 'Đang chia sẻ...';
+
+                await shareQrImage();
+
+                shareButton.querySelector('span').textContent = 'Thành công!';
+                setTimeout(() => {
+                    shareButton.querySelector('span').textContent = originalText;
+                    shareButton.classList.remove('loading');
+                }, 2000);
             });
         }
 
