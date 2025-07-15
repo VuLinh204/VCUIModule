@@ -373,8 +373,8 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
             return;
         }
 
-        if (typeof mainLoadPanel !== 'undefined' && mainLoadPanel.ShowLoadPanel) {
-            mainLoadPanel.ShowLoadPanel('Đang chia sẻ...');
+        if (MainLoadPanel.ShowLoadPanel) {
+            MainLoadPanel.ShowLoadPanel('Đang chia sẻ...');
         }
 
         try {
@@ -414,8 +414,8 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
         } catch (error) {
             console.error('Lỗi khi chia sẻ QR:', error);
         } finally {
-            if (typeof mainLoadPanel !== 'undefined' && mainLoadPanel.HideLoadPanel) {
-                mainLoadPanel.HideLoadPanel();
+            if (MainLoadPanel.HideLoadPanel) {
+                MainLoadPanel.HideLoadPanel();
             }
         }
     }
@@ -424,8 +424,8 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
         const originalText = button.querySelector('span').textContent;
 
         try {
-            if (typeof mainLoadPanel !== 'undefined' && mainLoadPanel.ShowLoadPanel) {
-                mainLoadPanel.ShowLoadPanel('Đang tải QR code...');
+            if (MainLoadPanel.ShowLoadPanel) {
+                MainLoadPanel.ShowLoadPanel('Đang tải QR code...');
             }
 
             button.classList.add('loading');
@@ -477,8 +477,8 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
             }
         } finally {
             button.classList.remove('loading');
-            if (typeof mainLoadPanel !== 'undefined' && mainLoadPanel.HideLoadPanel) {
-                mainLoadPanel.HideLoadPanel();
+            if (MainLoadPanel.HideLoadPanel) {
+                MainLoadPanel.HideLoadPanel();
             }
         }
     }
