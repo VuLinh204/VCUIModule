@@ -2,14 +2,14 @@
 
 /**
  * Import html2canvas library
- * 
+ *
  * Option 1: CDN (add to your HTML head)
  * <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
- * 
+ *
  * Option 2: NPM
  * npm install html2canvas
  * import html2canvas from 'html2canvas';
- * 
+ *
  * Option 3: Dynamic import (used in this module)
  */
 
@@ -330,7 +330,7 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
     async function elementToBase64(element, options = {}) {
         try {
             const html2canvas = await loadHtml2Canvas();
-            
+
             if (!html2canvas) {
                 console.error('html2canvas library could not be loaded');
                 return null;
@@ -345,7 +345,7 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
                 scrollY: 0,
                 width: element.offsetWidth,
                 height: element.offsetHeight,
-                ...options
+                ...options,
             });
 
             return canvas.toDataURL('image/png');
@@ -424,7 +424,6 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
         const originalText = button.querySelector('span').textContent;
 
         try {
-            // Hiển thị loading toàn màn hình
             if (typeof mainLoadPanel !== 'undefined' && mainLoadPanel.ShowLoadPanel) {
                 mainLoadPanel.ShowLoadPanel('Đang tải QR code...');
             }
@@ -433,19 +432,34 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
             button.querySelector('span').textContent = 'Đang tải...';
 
             const fullQrImageBase64 = await generateFullQrImage();
-            if (!fullQrImageBase64) throw new Error('Failed to generate QR image');
+            if (!fullQrImageBase64) throw new Error('Không thể tạo hình ảnh QR');
 
-            const link = document.createElement('a');
-            link.href = fullQrImageBase64;
-            link.download = `QRCode_${userName}_${new Date().toISOString().split('T')[0]}.png`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            const fileName = `QRCode_${userName}_${new Date().toISOString().split('T')[0]}.png`;
 
-            button.querySelector('span').textContent = 'Thành công!';
-            setTimeout(() => {
-                button.querySelector('span').textContent = originalText;
-            }, 2000);
+            // ✅ Gọi thủ tục AddMediaToPhotosLibrary qua apimobileAjax
+            const tmpData = {
+                MethodName: 'AddMediaToPhotosLibrary',
+                prs: [fullQrImageBase64, fileName],
+            };
+
+            const option = {
+                success: (res) => {
+                    console.log('✅ Đã lưu ảnh vào thư viện:', res);
+                    button.querySelector('span').textContent = 'Thành công!';
+                    setTimeout(() => {
+                        button.querySelector('span').textContent = originalText;
+                    }, 2000);
+                },
+                error: (err) => {
+                    console.error('❌ Lỗi khi lưu ảnh:', err);
+                    button.querySelector('span').textContent = 'Lỗi tải xuống';
+                    setTimeout(() => {
+                        button.querySelector('span').textContent = originalText;
+                    }, 2000);
+                },
+            };
+
+            await apimobileAjax(option, tmpData);
         } catch (error) {
             console.error('❌ Download error:', error);
             button.querySelector('span').textContent = 'Lỗi tải xuống';
@@ -454,6 +468,7 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
                 button.querySelector('span').textContent = originalText;
             }, 2000);
 
+            // fallback: mở ảnh nếu cần
             const fallbackImage = await generateFullQrImage();
             if (fallbackImage) {
                 const newWindow = window.open();
@@ -462,7 +477,6 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
             }
         } finally {
             button.classList.remove('loading');
-            // Ẩn load panel
             if (typeof mainLoadPanel !== 'undefined' && mainLoadPanel.HideLoadPanel) {
                 mainLoadPanel.HideLoadPanel();
             }
@@ -481,7 +495,7 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
 
         const downloadButton = container.querySelector('.action-item:nth-child(1)');
         if (downloadButton) {
-            downloadButton.addEventListener('click',  async (e) => {
+            downloadButton.addEventListener('click', async (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 await downloadQrImage(downloadButton);
@@ -543,6 +557,6 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
 
     // Return the function to generate full QR image for external use
     return {
-        generateFullQrImage: generateFullQrImage
+        generateFullQrImage: generateFullQrImage,
     };
 }
