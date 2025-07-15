@@ -351,6 +351,7 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
             return canvas.toDataURL('image/png');
         } catch (error) {
             console.error('Error converting element to base64:', error);
+            MainToast.ShowToast('Error converting element to base64:' + error, 'error');
             return null;
         }
     }
@@ -360,6 +361,7 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
         const fullContentElement = document.getElementById('qr-full-content');
         if (!fullContentElement) {
             console.error('QR full content element not found');
+            MainToast.ShowToast('QR full content element not found', 'error');
             return null;
         }
 
@@ -369,7 +371,7 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
 
     async function shareQrImage() {
         if (typeof apimobileAjax !== 'function') {
-            alert('Chức năng chia sẻ hiện chỉ hỗ trợ trong ứng dụng di động!');
+            MainToast.ShowToast('Chức năng chia sẻ hiện chỉ hỗ trợ trong ứng dụng di động!', 'error');
             return;
         }
 
@@ -380,7 +382,7 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
         try {
             const fullQrImageBase64 = await generateFullQrImage();
             if (!fullQrImageBase64) {
-                alert('Không thể tạo hình ảnh QR. Vui lòng thử lại.');
+                MainToast.ShowToast('Không thể tạo hình ảnh QR. Vui lòng thử lại.', 'error');
                 return;
             }
 
@@ -406,13 +408,19 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
             };
 
             const option = {
-                success: (res) => console.log('✅ Chia sẻ thành công:', res),
-                error: (err) => console.error('❌ Chia sẻ thất bại:', err),
+                success: (res) => {
+                    console.log('✅ Chia sẻ thành công:', res);
+                    MainToast.ShowToast('Chia sẻ thành công!', 'success');
+                },
+                error: (err) => {
+                    console.error('❌ Chia sẻ thất bại:', err), MainToast.ShowToast('Chia sẻ thất bại!', 'error');
+                },
             };
 
             await apimobileAjax(option, tmpData);
         } catch (error) {
             console.error('Lỗi khi chia sẻ QR:', error);
+            MainToast.ShowToast('Lỗi khi chia sẻ QR:' + error, 'error');
         } finally {
             if (MainLoadPanel.HideLoadPanel) {
                 MainLoadPanel.HideLoadPanel();
@@ -444,8 +452,8 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
 
             const option = {
                 success: (res) => {
-                    console.log('✅ Đã lưu ảnh vào thư viện:', res);
                     button.querySelector('span').textContent = 'Thành công!';
+                    MainToast.ShowToast('Lưu ảnh thành công!', 'success');
                     setTimeout(() => {
                         button.querySelector('span').textContent = originalText;
                     }, 2000);
@@ -453,6 +461,7 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
                 error: (err) => {
                     console.error('❌ Lỗi khi lưu ảnh:', err);
                     button.querySelector('span').textContent = 'Lỗi tải xuống';
+                    MainToast.ShowToast('Lưu ảnh không thành công!', 'error');
                     setTimeout(() => {
                         button.querySelector('span').textContent = originalText;
                     }, 2000);
@@ -462,6 +471,8 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
             await apimobileAjax(option, tmpData);
         } catch (error) {
             console.error('❌ Download error:', error);
+            MainToast.ShowToast('Lỗi tải xuống', 'error');
+
             button.querySelector('span').textContent = 'Lỗi tải xuống';
 
             setTimeout(() => {
@@ -511,10 +522,13 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
                 const originalText = shareButton.querySelector('span').textContent;
                 shareButton.classList.add('loading');
                 shareButton.querySelector('span').textContent = 'Đang chia sẻ...';
+                MainLoadPanel.ShowLoadPanel('Đang chia sẻ...');
 
                 await shareQrImage();
 
                 shareButton.querySelector('span').textContent = 'Thành công!';
+                MainToast.ShowToast('Chia sẻ thành công!', 'success');
+
                 setTimeout(() => {
                     shareButton.querySelector('span').textContent = originalText;
                     shareButton.classList.remove('loading');
