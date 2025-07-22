@@ -338,7 +338,7 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
             }
 
             // Use qrImageUrl directly
-            let filePath = qrImageUrl;
+            let filePath = qrImageUrl.replace(/^data:image\/png;base64,/, '');
             let filePathR = '';
 
             await new Promise((resolve, reject) => {
