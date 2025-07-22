@@ -1,12 +1,34 @@
 // qrCodeDisplayModule.js
 
 /**
+ * Import html2canvas library
+ *
+ * Option 1: CDN (add to your HTML head)
+ * <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+ *
+ * Option 2: NPM
+ * npm install html2canvas
+ * import html2canvas from 'html2canvas';
+ *
+ * Option 3: Dynamic import (used in this module)
+ */
+
+/**
  * Creates and initializes a self-contained QR code display module.
  * The module injects its own HTML and CSS into the document.
  *
  * @param {string} userName - The name of the user to display on the QR card.
  * @param {string} qrImageUrl - The URL for the QR code image.
  * @param {string} [targetElementId='qr-display-container'] - The ID of the HTML element where the QR display will be rendered.
+ */
+
+/**
+ * Cache và optimization variables
+ */
+let cachedQrImageUrl = null;
+
+/**
+ * Creates and initializes a self-contained QR code display module with performance optimizations.
  */
 export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'qr-display-container') {
     const htmlContent = `
@@ -22,31 +44,34 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
                 </div>
             </div>
 
-            <div class="qr-section">
-                <div class="qr-code-container">
-                    <img src="${qrImageUrl}" alt="QR Code" class="qr-image">
+            <!-- Container for displaying QR image -->
+            <div class="qr-full-content" id="qr-full-content">
+                <div class="qr-section">
+                    <div class="qr-code-container">
+                        <img src="${qrImageUrl}" alt="QR Code" class="qr-image" loading="eager" crossorigin="anonymous">
+                    </div>
+                    <div class="user-info">
+                        <span class="user-name">${userName}</span>
+                    </div>
+                    <div class="qr-description">
+                        QR đồng bộ dữ liệu và kết nối nhân sự trên Vào Ca <br> Ứng dụng quản trị nhân sự toàn diện trên điện
+                        thoại.
+                    </div>
                 </div>
-                <div class="user-info">
-                    <span class="user-name">${userName}</span>
-                </div>
-                <div class="qr-description">
-                    QR đồng bộ dữ liệu và kết nối nhân sự trên Vào Ca <br> Ứng dụng quản trị nhân sự toàn diện trên điện
-                    thoại.
-                </div>
-            </div>
 
-            <div class="activation-section">
-                <div class="activation-header">
-                    <div class="activation-title">Kích hoạt hồ sơ nhân viên</div>
-                </div>
-                <div class="activation-details">
-                    Tải ứng dụng <span class="highlight">Vào Ca</span> về điện thoại, sau đó đăng nhập vào ứng dụng, mở chức
-                    năng quét QR và thực hiện đồng bộ nhân sự trên ứng dụng.
+                <div class="activation-section">
+                    <div class="activation-header">
+                        <div class="activation-title">Kích hoạt hồ sơ nhân viên</div>
+                    </div>
+                    <div class="activation-details">
+                        Tải ứng dụng <span class="highlight">Vào Ca</span> về điện thoại, sau đó đăng nhập vào ứng dụng, mở chức
+                        năng quét QR và thực hiện đồng bộ nhân sự trên ứng dụng.
+                    </div>
                 </div>
             </div>
 
             <div class="action-buttons">
-                <div class="action-item">
+                <div class="action-item" data-action="download">
                     <svg style="margin-bottom: 4px;" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24px"
                         height="24px" viewBox="0 0 24 24" version="1.1">
                         <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
@@ -65,10 +90,9 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
                     </svg>
                     <span>Tải xuống</span>
                 </div>
-                <div class="action-item">
+                <div class="action-item" data-action="share">
                     <svg style="margin-bottom: 4px;" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24px"
                         height="24px" viewBox="0 0 24 24" version="1.1">
-
                         <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
                             <rect x="0" y="0" width="24" height="24" />
                             <path
@@ -110,6 +134,7 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
             position: relative;
             border-radius: 32px;
             z-index: 2000;
+            will-change: transform;
         }
 
         .containerQRByVu .header {
@@ -132,14 +157,21 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
             justify-content: center;
             align-items: center;
             border-radius: 50%;
-            cursor: pointer; /* Add cursor pointer for better UX */
+            cursor: pointer;
+        }
+
+        .qr-full-content {
+            width: 100%;
+            background: linear-gradient(290deg, #EAF6FF 9.78%, #F3FFE9 109.56%);
+            padding: 10px 20px;
+            box-sizing: border-box;
+            transform: translateZ(0);
         }
 
         .containerQRByVu .qr-section {
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 0px;
             background-color: transparent;
         }
 
@@ -161,6 +193,7 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
             width: 90%;
             height: 90%;
             object-fit: contain;
+            will-change: contents;
         }
 
         .containerQRByVu .user-info {
@@ -181,7 +214,7 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
         .containerQRByVu .activation-section {
             background-color: #f9f9f9;
             padding: 15px;
-            margin: 10px 25px;
+            margin: 10px 0;
             border-radius: 10px;
             border: 1px solid #fff;
         }
@@ -215,7 +248,6 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
             justify-content: space-around;
             padding: 10px 0;
             border-top: 1px solid #eee;
-            margin-top: 15px;
         }
 
         .containerQRByVu .action-item {
@@ -225,122 +257,262 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
             font-size: 12px;
             color: #555;
             cursor: pointer;
+            transition: opacity 0.2s ease;
         }
 
-        .containerQRByVu .action-item i {
-            font-size: 24px;
-            margin-bottom: 5px;
-            color: #007bff;
+        .containerQRByVu .action-item:hover {
+            opacity: 0.7;
         }
 
-        /* Note: .bottom-nav and .bottom-text were in your CSS but not in your HTML structure.
-           I'm keeping them here for completeness if you decide to add them. */
-        .containerQRByVu .bottom-nav {
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            padding: 10px 0;
-            background-color: #fff;
-            border-bottom: 3px solid #fff;
+        .containerQRByVu .action-item.loading {
+            pointer-events: none;
         }
 
-        .containerQRByVu .bottom-nav-item {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            width: 40px;
-            height: 40px;
+        .containerQRByVu .action-item.loading span {
+            opacity: 0.6;
+        }
+
+        .containerQRByVu .action-item.loading span::before {
+            content: '';
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            margin-right: 6px;
+            border: 2px solid #004c39;
+            border-top: 2px solid transparent;
             border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            vertical-align: middle;
         }
 
-        .containerQRByVu .bottom-text {
-            font-size: 12px;
-            color: #888;
-            text-align: center;
-            padding: 10px 20px;
-            margin-bottom: 10px;
+        .containerQRByVu .action-item.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     `;
 
-    // Function to inject CSS
+    // Cache CSS injection
     function injectCss(css) {
-        const style = document.createElement('style');
-        style.textContent = css;
-        document.head.appendChild(style);
+        const existingStyle = document.querySelector('#qr-module-styles');
+        if (!existingStyle) {
+            const style = document.createElement('style');
+            style.id = 'qr-module-styles';
+            style.textContent = css;
+            document.head.appendChild(style);
+        }
     }
 
-    async function shareQrImage(qrImageUrl) {
+    // Preload QR image để tối ưu tốc độ
+    function preloadQrImage(url) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = url;
+        });
+    }
+
+    // Optimized share function using qrImageUrl directly
+    async function shareQrImage(button) {
         if (typeof apimobileAjax !== 'function') {
-            alert('Chức năng chia sẻ hiện chỉ hỗ trợ trong ứng dụng di động!');
+            if (typeof MainToast !== 'undefined' && MainToast.ShowToast) {
+                MainToast.ShowToast('Chức năng chia sẻ hiện chỉ hỗ trợ trong ứng dụng di động!', 'error');
+            }
             return;
         }
-        let filePath = qrImageUrl.replace(/^data:image\/png;base64,/, '');
-        let filePathR = '';
-        await apimobileAjaxAsync(
-            {
-                success: function (data) {
-                    console.log('🚀 ~ success:function ~ data:', data);
-                    filePathR = data;
-                },
-            },
-            {
-                MethodName: 'MergeFileSplit',
-                prs: [filePath, 0, 1, 'ScanQrDevice.jpg', 'ScanQrDevice.jpg', ''],
+
+        const originalText = button.querySelector('span').textContent;
+
+        try {
+            button.classList.add('loading');
+            button.querySelector('span').textContent = 'Đang chia sẻ...';
+
+            if (typeof MainLoadPanel !== 'undefined' && MainLoadPanel.ShowLoadPanel) {
+                MainLoadPanel.ShowLoadPanel('Đang chia sẻ...');
             }
-        );
 
-        const fileName = 'ScanQrDevice.jpg';
-        const tmpData = {
-            MethodName: 'MobileShareFileAsync',
-            prs: [filePathR, fileName],
-        };
+            // Use qrImageUrl directly
+            let filePath = qrImageUrl;
+            let filePathR = '';
 
-        const option = {
-            success: (res) => console.log('✅ Chia sẻ thành công:', res),
-            error: (err) => console.error('❌ Chia sẻ thất bại:', err),
-        };
+            await new Promise((resolve, reject) => {
+                apimobileAjax(
+                    {
+                        success: function (data) {
+                            filePathR = data;
+                            resolve(data);
+                        },
+                        error: reject,
+                    },
+                    {
+                        MethodName: 'MergeFileSplit',
+                        prs: [filePath, 0, 1, 'ScanQrDevice.jpg', 'ScanQrDevice.jpg', ''],
+                    }
+                );
+            });
 
-        await apimobileAjax(option, tmpData);
+            const fileName = 'ScanQrDevice.jpg';
+            const tmpData = {
+                MethodName: 'MobileShareFileAsync',
+                prs: [filePathR, fileName],
+            };
+
+            await new Promise((resolve, reject) => {
+                apimobileAjax(
+                    {
+                        success: (res) => {
+                            console.log('✅ Chia sẻ thành công:', res);
+                            if (typeof MainToast !== 'undefined' && MainToast.ShowToast) {
+                                MainToast.ShowToast('Chia sẻ thành công!', 'success');
+                            }
+                            resolve(res);
+                        },
+                        error: (err) => {
+                            console.error('❌ Chia sẻ thất bại:', err);
+                            if (typeof MainToast !== 'undefined' && MainToast.ShowToast) {
+                                MainToast.ShowToast('Chia sẻ thất bại!', 'error');
+                            }
+                            reject(err);
+                        },
+                    },
+                    tmpData
+                );
+            });
+
+            button.querySelector('span').textContent = 'Thành công!';
+            setTimeout(() => {
+                button.querySelector('span').textContent = originalText;
+            }, 2000);
+        } catch (error) {
+            console.error('Lỗi khi chia sẻ QR:', error);
+            button.querySelector('span').textContent = 'Lỗi chia sẻ';
+            if (typeof MainToast !== 'undefined' && MainToast.ShowToast) {
+                MainToast.ShowToast('Lỗi khi chia sẻ QR: ' + error.message, 'error');
+            }
+            setTimeout(() => {
+                button.querySelector('span').textContent = originalText;
+            }, 2000);
+        } finally {
+            button.classList.remove('loading');
+            if (typeof MainLoadPanel !== 'undefined' && MainLoadPanel.HideLoadPanel) {
+                MainLoadPanel.HideLoadPanel();
+            }
+        }
     }
 
-    // Function to set up event listeners
+    // Optimized download function using qrImageUrl directly
+    async function downloadQrImage(button) {
+        const originalText = button.querySelector('span').textContent;
+
+        try {
+            button.classList.add('loading');
+            button.querySelector('span').textContent = 'Đang tải...';
+
+            if (typeof MainLoadPanel !== 'undefined' && MainLoadPanel.ShowLoadPanel) {
+                MainLoadPanel.ShowLoadPanel('Đang tải QR code...');
+            }
+
+            // Use qrImageUrl directly or fetch content if needed
+            const fileName = `QRCode_${userName}_${new Date().toISOString().split('T')[0]}.png`;
+            const tmpData = {
+                MethodName: 'AddMediaToPhotosLibrary',
+                prs: [qrImageUrl, fileName], // Gửi URL trực tiếp, yêu cầu server xử lý
+            };
+
+            await new Promise((resolve, reject) => {
+                apimobileAjax(
+                    {
+                        success: (res) => {
+                            button.querySelector('span').textContent = 'Thành công!';
+                            if (typeof MainToast !== 'undefined' && MainToast.ShowToast) {
+                                MainToast.ShowToast('Lưu ảnh thành công!', 'success');
+                            }
+                            resolve(res);
+                        },
+                        error: (err) => {
+                            console.error('❌ Lỗi khi lưu ảnh:', err);
+                            button.querySelector('span').textContent = 'Lỗi tải xuống';
+                            if (typeof MainToast !== 'undefined' && MainToast.ShowToast) {
+                                MainToast.ShowToast('Lưu ảnh không thành công!', 'error');
+                            }
+                            reject(err);
+                        },
+                    },
+                    tmpData
+                );
+            });
+
+            setTimeout(() => {
+                button.querySelector('span').textContent = originalText;
+            }, 2000);
+        } catch (error) {
+            console.error('❌ Download error:', error);
+            button.querySelector('span').textContent = 'Lỗi tải xuống';
+            if (typeof MainToast !== 'undefined' && MainToast.ShowToast) {
+                MainToast.ShowToast('Lỗi tải xuống: ' + error.message, 'error');
+            }
+            setTimeout(() => {
+                button.querySelector('span').textContent = originalText;
+            }, 2000);
+        } finally {
+            button.classList.remove('loading');
+            if (typeof MainLoadPanel !== 'undefined' && MainLoadPanel.HideLoadPanel) {
+                MainLoadPanel.HideLoadPanel();
+            }
+        }
+    }
+
+    // Optimized event listener setup với event delegation
     function setupEventListeners(container) {
         const overlay = container.closest('.qr-popup-overlay');
         const closeIcon = container.querySelector('.close-icon');
+
         if (overlay && closeIcon) {
             closeIcon.addEventListener('click', () => {
                 overlay.remove();
             });
         }
 
-        const downloadButton = container.querySelector('.action-item:nth-child(1)');
-        if (downloadButton) {
-            downloadButton.addEventListener('click', async () => {
+        // Event delegation cho action buttons
+        const actionButtons = container.querySelector('.action-buttons');
+        if (actionButtons) {
+            actionButtons.addEventListener('click', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const actionItem = e.target.closest('.action-item');
+                if (!actionItem || actionItem.classList.contains('loading') || actionItem.classList.contains('disabled')) {
+                    return;
+                }
+
+                const action = actionItem.dataset.action;
+
+                // Disable tất cả buttons khi đang xử lý
+                const allButtons = actionButtons.querySelectorAll('.action-item');
+                allButtons.forEach((btn) => btn.classList.add('disabled'));
+
                 try {
-                    let imageDataUrl = qrImageUrl.replace(/,"QRCode\.png"/, '');
-
-                    const link = document.createElement('a');
-                    link.href = imageDataUrl;
-                    link.download = 'QRCode.png';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-
-                    console.log('✅ Đã tải xuống mã QR.');
-                } catch (error) {
-                    console.error('❌ Lỗi khi tải QR:', error);
-                    alert('Không thể tải ảnh QR. Vui lòng thử lại.');
+                    if (action === 'download') {
+                        await downloadQrImage(actionItem);
+                    } else if (action === 'share') {
+                        await shareQrImage(actionItem);
+                    }
+                } finally {
+                    // Re-enable buttons
+                    setTimeout(() => {
+                        allButtons.forEach((btn) => btn.classList.remove('disabled'));
+                    }, 1000);
                 }
             });
         }
 
-        const shareButton = container.querySelector('.action-item:nth-child(2)');
-        if (shareButton) {
-            shareButton.addEventListener('click', () => {
-                shareQrImage(qrImageUrl);
-            });
-        }
-
+        // Overlay click to close
         if (overlay) {
             overlay.addEventListener('click', (e) => {
                 if (e.target === overlay) {
@@ -351,26 +523,45 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
         }
     }
 
-    // Find or create the target element
-    let targetElement = document.getElementById(targetElementId);
-    if (!targetElement) {
-        console.warn(`Target element with ID "${targetElementId}" not found. Creating a div at the end of body.`);
-        targetElement = document.createElement('div');
-        targetElement.id = targetElementId;
-        document.body.appendChild(targetElement);
+    // Initialize module
+    async function initializeModule() {
+        // Find or create target element
+        let targetElement = document.getElementById(targetElementId);
+        if (!targetElement) {
+            console.warn(`Target element with ID "${targetElementId}" not found. Creating a div at the end of body.`);
+            targetElement = document.createElement('div');
+            targetElement.id = targetElementId;
+            document.body.appendChild(targetElement);
+        }
+
+        // Inject HTML và CSS
+        targetElement.innerHTML = htmlContent;
+        injectCss(cssContent);
+
+        // Setup event listeners
+        const qrDisplayContainer = targetElement.querySelector('.containerQRByVu');
+        if (qrDisplayContainer) {
+            setupEventListeners(qrDisplayContainer);
+        } else {
+            console.error('QR display container not found after injection.');
+            return;
+        }
+
+        // Preload QR image trong background
+        try {
+            await preloadQrImage(qrImageUrl);
+        } catch (error) {
+            console.warn('Preloading failed:', error);
+        }
     }
 
-    // Inject HTML
-    targetElement.innerHTML = htmlContent;
+    // Start initialization
+    initializeModule();
 
-    // Inject CSS
-    injectCss(cssContent);
-
-    // Set up event listeners on the newly injected content
-    const qrDisplayContainer = targetElement.querySelector('.containerQRByVu');
-    if (qrDisplayContainer) {
-        setupEventListeners(qrDisplayContainer);
-    } else {
-        console.error('QR display container not found after injection.');
-    }
+    // Return API
+    return {
+        preloadResources: async () => {
+            await preloadQrImage(qrImageUrl);
+        },
+    };
 }
