@@ -388,7 +388,7 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
             // Optimized canvas options
             const canvas = await html2canvas(fullContentElement, {
                 backgroundColor: '#EAF6FF',
-                scale: window.devicePixelRatio || 1, // Sử dụng device pixel ratio
+                scale: 1, // Sử dụng device pixel ratio
                 useCORS: true,
                 allowTaint: true,
                 scrollX: 0,
@@ -400,7 +400,7 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
                 removeContainer: false,
             });
 
-            const base64Image = canvas.toDataURL('image/png', 0.9); // Giảm chất lượng một chút để tăng tốc độ
+            const base64Image = canvas.toDataURL('image/png', 0.7); // Giảm chất lượng một chút để tăng tốc độ
 
             // Cache result
             if (useCache) {
@@ -566,18 +566,6 @@ export function createQrDisplayModule(userName, qrImageUrl, targetElementId = 'q
             setTimeout(() => {
                 button.querySelector('span').textContent = originalText;
             }, 2000);
-
-            // Fallback: mở ảnh trong tab mới
-            try {
-                const fallbackImage = await generateFullQrImage(true);
-                if (fallbackImage) {
-                    const newWindow = window.open();
-                    newWindow.document.write(`<img src="${fallbackImage}" alt="QR Code" style="max-width: 100%; height: auto;">`);
-                    newWindow.document.title = 'QR Code - Right click to save';
-                }
-            } catch (fallbackError) {
-                console.error('Fallback cũng thất bại:', fallbackError);
-            }
         } finally {
             button.classList.remove('loading');
             if (typeof MainLoadPanel !== 'undefined' && MainLoadPanel.HideLoadPanel) {
